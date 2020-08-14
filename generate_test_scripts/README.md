@@ -1,3 +1,5 @@
+##### Generate test scripts dynamically using given xml file.
+
 Use below command to pass xml, which generates all test scripts in current directory
 ```sh
 >./createTestScritpts.pl --xml_file=</path/to/xml_file>

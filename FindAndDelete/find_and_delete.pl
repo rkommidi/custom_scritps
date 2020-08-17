@@ -31,7 +31,7 @@ foreach my $in_line ( <$in_fh> ) {
 
 #print "@ids";
 
-open (my $result_fh, '>', "updated_".$output_file ) or die $!;
+open (my $result_fh, '>', $output_file."_new" ) or die $!;
 foreach my $out_line ( <$out_fh> ) {
     my $found = 0;
     foreach my $id (@ids) {

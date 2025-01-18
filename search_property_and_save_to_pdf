@@ -1,0 +1,126 @@
+import pandas as pd
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+import time
+import base64
+
+def read_excel(file_path):
+    df = pd.read_excel(file_path)
+    return df[['id', 'Website', 'Address', 'Result_HyperLink', 'Result_Human', 'ClickTab_BeforeSearch']]
+
+def handle_disclaimer_popup(driver):
+    """
+    Check for the disclaimer popup and click the Accept button if present.
+    """
+    try:
+        # Adjust the locator for the disclaimer popup Accept button as needed
+        #accept_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Accept') or contains(text(), 'I Agree')]")
+        #accept_button = driver.find_element(By.XPATH, "//a[@id='btnAccept' and contains(@class, 'page-link')]")
+        accept_button = driver.find_element(By.XPATH, "//a[(contains(@id, 'btnAccept') and contains(@class, 'page-link')) or (contains(@class, 'btn-primary') and text()='Agree')]")
+        accept_button.click()
+        print("Disclaimer popup accepted.")
+        time.sleep(1)  # Wait for the popup to close (adjust as needed)
+    except NoSuchElementException:
+        print("No disclaimer popup found.")
+
+def search_address(url, address_text,output_file,id,Rules):
+    # Initialize WebDriver service
+    chromedriver_path = r"C:\Users\Raghav\Documents\pdfgenerator\chromedriver-win64\chromedriver.exe"
+    service = Service(chromedriver_path)
+    options = webdriver.ChromeOptions()
+    driver = webdriver.Chrome(service=service, options=options)
+
+    try:        
+        driver.get(url)
+        handle_disclaimer_popup(driver)
+    except Exception as e:
+        print(f"An error occurred during opening {url}: {e}")        
+    time.sleep(3)  # Wait for the page to load
+    # List of possible locator strategies for different search fields
+    search_field_selectors = [
+        (By.ID, 'PropertyAddress'),
+        (By.CLASS_NAME, 'k-input-inner'),
+        (By.CSS_SELECTOR, 'input[formcontrolname="PropertyAddress"]'),
+        (By.ID, 'owner_name'),
+        (By.ID, 'txtField'),
+        (By.CSS_SELECTOR, 'input[name="ctlBodyPane$ctl01$ctl01$txtAddress"]'),
+    ]
+
+    for by, value in search_field_selectors:
+        try:
+            # Attempt to find the element
+            search_field = driver.find_element(by, value)
+            print(f"Found search field with {by} = '{value}'")
+            # Find the search field and enter the address text
+            #search_field = driver.find_element(By.ID, 'PropertyAddress')
+            try: 
+                time.sleep(1) 
+                search_field.send_keys(address_text)
+                search_field.send_keys(Keys.RETURN)
+                time.sleep(3)  # Wait for the search results to load
+
+                if(Rules['Result_HyperLink'] == 'Y'):
+                    # Click on the hyperlink to view the details
+                    try:                        
+                        result_link = driver.find_element(By.XPATH, "//a[contains(text(), '01-4105-047-0090')]")
+                        result_link.click()
+                        time.sleep(3)  # Wait for the details page to load
+                    except NoSuchElementException:
+                        print("No 'View Details' link found.")
+
+                #html_content = driver.page_source
+                # Use the DevTools Protocol to print the page to PDF
+                result = driver.execute_cdp_cmd("Page.printToPDF", {
+                    "format": "A4",
+                    "printBackground": True
+                })
+
+                # Define the output file path                
+                file_name = f"{output_file}\{id}_{address_text.replace(',', '').replace(' ', '_')}.pdf"
+                print(f"{file_name}")
+                # Decode the base64-encoded PDF and save to a file
+                with open(file_name, "wb") as pdf_file:
+                    pdf_file.write(base64.b64decode(result['data']))
+
+                print(f"PDF saved to {file_name}")   
+                driver.quit()
+                return True      
+            except Exception as e:
+                print(f"Error searching address: {e}")  
+                driver.quit()  
+                return False
+        except Exception as e:
+            # Continue to the next selector if not found
+            continue
+    driver.quit()
+    raise Exception("Search field not found on this page.")
+
+
+def main(file_path,output_file):
+    df = read_excel(file_path)
+    
+    for _, row in df.iterrows():
+        id = row['id']
+        url = row['Website']
+        address_text = row['Address']
+        Rules = {
+            'Result_HyperLink': row['Result_HyperLink'],
+            'Result_Human': row['Result_Human'],
+            'ClickTab_BeforeSearch': row['ClickTab_BeforeSearch']
+        }
+
+        print("\n\n\n*************************************Starting for id: ",id)
+        result = search_address(url, address_text,output_file,id,Rules)        
+        if result:
+            print(f"Processed {url} for address {address_text}")
+        else:
+            print(f"Error Processed {url} for address {address_text}")
+
+if __name__ == "__main__":
+    #file_path = input("Enter the path to the Excel file: ")
+    file_path = r'C:\Users\Raghav\Documents\pdfgenerator\address_list3.xlsx'
+    output_file = r'C:\Users\Raghav\Documents\pdfgenerator\output'
+    main(file_path, output_file)

@@ -150,7 +150,7 @@ def search_address(url, address_text, output_file, id, rules):
     # Extract domain from URL
     domain =  urlparse(url).netloc
     # Initialize WebDriver service
-    chromedriver_path = r"C:\Users\rkommidi\Documents\pdfgenerator\chromedriver-win64\chromedriver.exe"
+    chromedriver_path = r"chromedriver-win64\chromedriver.exe"
     service = Service(chromedriver_path)
     options = webdriver.ChromeOptions()
     driver = webdriver.Chrome(service=service, options=options)
@@ -201,9 +201,9 @@ def main(file_path, output_file, config_path, target_ids=None):
             print(f"Error processing {url} for address {address_text}")
 
 if __name__ == "__main__":
-    file_path = r'C:\Users\rkommidi\Documents\pdfgenerator\address_list3.xlsx'
-    output_file = r'C:\Users\rkommidi\Documents\pdfgenerator\output'
-    config_path = r'C:\Users\rkommidi\Documents\pdfgenerator\rules.config'
+    file_path = r'address_list3.xlsx'
+    output_file = r'output'
+    config_path = r'rules.config'
     target_ids = None
     if len(sys.argv) > 1:
         target_ids = [int(id) for id in sys.argv[1].split(',')]

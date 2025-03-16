@@ -91,6 +91,21 @@ def perform_search(driver, address_text, search_field_rule):
     """
     Perform the search and handle the result.
     """
+    # Check if Enter key needs to be pressed after entering the address
+    isEnter = True
+    if "isEnter" in search_field_rule:
+        isEnter = search_field_rule["isEnter"]
+        del search_field_rule["isEnter"]
+
+    # Split the address text if needed, 0 for street number, 1 for street name, etc.
+    if "isSplit" in search_field_rule:
+        split_index = search_field_rule["isSplit"]
+        if split_index == 0:
+            address_text = address_text.split(' ')[split_index]
+        else:
+            address_text = address_text.split(' ')[split_index:]
+        del search_field_rule["isSplit"]
+
     for by in search_field_rule:
         value = search_field_rule[by]
         print(f"by: {by}")
@@ -100,7 +115,8 @@ def perform_search(driver, address_text, search_field_rule):
             search_field = driver.find_element(getattr(By, by.upper()), value)
             print(f"Found search field with {by} = '{value}'")
             search_field.send_keys(address_text)
-            search_field.send_keys(Keys.RETURN)
+            if isEnter:
+                search_field.send_keys(Keys.RETURN)
             time.sleep(3)  # Wait for the search results to load
             return
         except Exception as e:
